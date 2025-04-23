@@ -1,6 +1,6 @@
 # NexusSocial Social Layer
 
-This serves as a monorepo for projects related to the social layer for Nexus.
+This serves as a monorepo for projects related to the social layer for vr games (and other types of games too!).
 
 In particular, it hosts:
 * TODO: Fill this in
