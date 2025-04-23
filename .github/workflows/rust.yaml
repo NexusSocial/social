@@ -1,0 +1,70 @@
+name: Rust CI
+on:
+  workflow_call:
+    inputs:
+      cargo-profile:
+        required: true
+        type: string
+
+env:
+  CI_IS_DEFAULT_BRANCH: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+jobs:
+  fmt:
+    name: Check Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Check formatting
+        run: cargo fmt --check --all
+
+
+  test:
+    name: Run Tests
+    strategy:
+      matrix:
+        runs-on: ["ubuntu-24.04", "windows-2022", "macos-14"]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2.7.3
+
+      - name: Test
+        run: cargo test --profile artifact-dev --all --all-features --all-targets
+
+  deny:
+    name: Licensing and Advisories
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4.2.0
+    - uses: EmbarkStudios/cargo-deny-action@v2.0.1
+
+  build:
+    name: Build Binaries
+    env:
+      LINUX: x86_64-unknown-linux-musl 
+      LINUX_ARM: aarch64-unknown-linux-musl 
+      WINDOWS: x86_64-pc-windows-gnu 
+      MACOS: aarch64-apple-darwin
+    # We run the jobs with a matrix, because currently we don't support cross
+    # compilation to macos unless your'e already on macos. And mac runners are
+    # expensive, so we choose to only run the builds for targets on the mac runners.
+    strategy:
+      matrix:
+        runner-vars:
+          - runs-on: macos-14
+            host-triple: aarch64-apple-darwin
+          - runs-on: ubuntu-24.04
+            host-triple: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner-vars.runs-on }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2.7.3
+
+      - name: Cargo build
+        run: |
+          cargo build \
+            --profile ${{ inputs.cargo-profile }} \
+            --all
